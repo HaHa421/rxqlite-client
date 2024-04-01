@@ -3,37 +3,10 @@ name: CI
 on: [push]
 
 jobs:
-  download-latest-rxqlited:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-    - name: Download rxqlite binaries
-      run: |
-        wget https://github.com/HaHa421/rxqlite/releases/latest/download/rxqlited-win32.zip
-        wget https://github.com/HaHa421/rxqlite/releases/latest/download/rxqlited-ubuntu.zip
-    
-    - name: Create rxqlited destination directories
-      run: |
-        mkdir -p ${{ github.workspace }}/target/x86_64-pc-windows-msvc/release
-        mkdir -p  ${{ github.workspace }}/target/x86_64-unknown-linux-gnu/release
-        
-    - name: Extract and move binaries
-      run: |
-        unzip rxqlited-win32.zip -d ${{ github.workspace }}/target/x86_64-pc-windows-msvc/release
-        unzip rxqlited-ubuntu.zip -d ${{ github.workspace }}/target/x86_64-unknown-linux-gnu/release
-    
-    - name: Verify rxqlited exists
-      run: |
-        if [[ ! -f ${{ github.workspace }}/target/x86_64-unknown-linux-gnu/release/rxqlited ]] && [[ ! -f ${{ github.workspace }}/target/x86_64-pc-windows-msvc/release/rxqlited.exe ]]; then
-          echo "Error: rxqlited not found"
-          exit 1
-        fi
-    
 
   build:
-    needs: download-latest-rxqlited
+    permissions:
+      contents: write
     strategy:
       matrix:
         os: [windows-latest,ubuntu-latest] 
@@ -44,14 +17,54 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
-    - uses: ilammy/msvc-dev-cmd@v1
-    
     - name: Set target triple (Ubuntu)
       if: matrix.os == 'ubuntu-latest'
       run: echo "TARGET_TRIPLE=x86_64-unknown-linux-gnu" >> $GITHUB_ENV
     - name: Set target triple (Windows)
       if: matrix.os == 'windows-latest'
       run: echo "TARGET_TRIPLE=x86_64-pc-windows-msvc" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+    
+    - name: Set archive name (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: echo "RXQLITED_ARCHIVE=rxqlited-ubuntu.zip" >> $GITHUB_ENV
+    - name: Set archive name (Windows)
+      if: matrix.os == 'windows-latest'
+      run: echo "RXQLITED_ARCHIVE=rxqlited-win32.zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append    
+      
+    - name: Download rxqlite binaries
+      run: |
+        wget https://github.com/HaHa421/rxqlite/releases/latest/download/{{ env.RXQLITED_ARCHIVE }}
+    
+    
+      
+    - name: Create rxqlited destination directories
+      run: |
+        mkdir -p ${{ github.workspace }}/target/${{ env.TARGET_TRIPLE }}/release
+      
+    - name: Extract and move binaries
+      run: |
+        unzip {{ env.RXQLITED_ARCHIVE }} -d ${{ github.workspace }}/target/${{ env.TARGET_TRIPLE }}/release
+        
+    
+    - name: Verify rxqlited exists(Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        if [ ! -f ${{ github.workspace }}/target/${{ env.TARGET_TRIPLE }}/release/rxqlited ]; then
+          echo "Error: rxqlited not found"
+          exit 1
+        fi
+    - name: Verify rxqlited exists(Windows)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        if [ ! -f ${{ github.workspace }}/target/${{ env.TARGET_TRIPLE }}/release/rxqlited.exe ]; then
+          echo "Error: rxqlited.exe not found"
+          exit 1
+        fi
+        
+    - uses: ilammy/msvc-dev-cmd@v1
+    
+    
+    
      
     - name: Install dependencies (Ubuntu)
       if: matrix.os == 'ubuntu-latest'
