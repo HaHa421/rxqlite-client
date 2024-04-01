@@ -1154,14 +1154,14 @@ checksum = "7ffc183a10b4478d04cbbbfc96d0873219d962dd5accaff2ffbd4ceb7df837f4"
 
 [[package]]
 name = "rxqlite-client"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "chrono",
  "futures",
  "futures-util",
  "reqwest",
- "rustls 0.22.3",
+ "rustls 0.23.4",
  "rxqlite-common",
  "rxqlite-lite-common",
  "rxqlite-notification",
@@ -1172,11 +1172,14 @@ dependencies = [
  "tokio",
  "tokio-rustls 0.26.0",
  "tokio-util",
+ "tracing",
 ]
 
 [[package]]
 name = "rxqlite-common"
 version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60039643a1af87239256d24771fbe2249570468baa100d066f134930d07cd1dc"
 dependencies = [
  "chrono",
  "serde",
@@ -1185,6 +1188,8 @@ dependencies = [
 [[package]]
 name = "rxqlite-lite-common"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1b4d06cc68030ea4fc5ea3fe3e5f2e96a854f18e81ecc1f5903dea860c207fb"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1198,6 +1203,8 @@ dependencies = [
 [[package]]
 name = "rxqlite-notification"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d179ae38b166ed88fe1593abcbbda8b389b61d515bf084a16fe41f358e952ec0"
 dependencies = [
  "serde",
 ]
@@ -1205,6 +1212,8 @@ dependencies = [
 [[package]]
 name = "rxqlite-tests-common"
 version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca8485c03d69c5ea2660a58cc53e02e2ce879e06c4d8a8de6fe9a43d76b662e3"
 dependencies = [
  "anyhow",
  "nix",
