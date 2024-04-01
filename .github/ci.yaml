@@ -1,0 +1,86 @@
+name: CI
+
+on: [push]
+
+jobs:
+  download-latest-rxqlited:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download rxqlite binaries
+      run: |
+        wget https://github.com/HaHa421/rxqlite/releases/latest/download/rxqlited-win32.zip
+        wget https://github.com/HaHa421/rxqlite/releases/latest/download/rxqlited-ubuntu.zip
+    
+    - name: Create rxqlited destination directories
+      run: |
+        mkdir -p ${{ github.workspace }}/target/x86_64-pc-windows-msvc/release
+        mkdir -p  ${{ github.workspace }}/target/x86_64-unknown-linux-gnu/release
+        
+    - name: Extract and move binaries
+      run: |
+        unzip rxqlited-win32.zip -d ${{ github.workspace }}/target/x86_64-pc-windows-msvc/release
+        unzip rxqlited-ubuntu.zip -d ${{ github.workspace }}/target/x86_64-unknown-linux-gnu/release
+    
+    - name: Verify rxqlited exists
+      run: |
+        if [[ ! -f ${{ github.workspace }}/target/x86_64-unknown-linux-gnu/release/rxqlited ]] && [[ ! -f ${{ github.workspace }}/target/x86_64-pc-windows-msvc/release/rxqlited.exe ]]; then
+          echo "Error: rxqlited not found"
+          exit 1
+        fi
+    
+
+  build:
+    depends: download-latest-rxqlited
+    strategy:
+      matrix:
+        os: [windows-latest,ubuntu-latest] 
+    
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ilammy/msvc-dev-cmd@v1
+    
+    - name: Set target triple (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: echo "TARGET_TRIPLE=x86_64-unknown-linux-gnu" >> $GITHUB_ENV
+    - name: Set target triple (Windows)
+      if: matrix.os == 'windows-latest'
+      run: echo "TARGET_TRIPLE=x86_64-pc-windows-msvc" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+     
+    - name: Install dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get update && sudo apt-get install -y build-essential
+    
+    - name: Install NASM(Windows)
+      if: matrix.os == 'windows-latest'
+      run: choco install nasm -y
+      
+    - name: Update local toolchain
+      run: |
+        rustup update
+          
+    - name: Display Rust Version
+      run:  |
+        cargo -vV
+        rustc -vV
+    
+    - name: Test(Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: cargo test --release --target ${{ env.TARGET_TRIPLE }} -- --nocapture
+      env:
+        CARGO_TERM_COLOR: always
+        TMPDIR: ${{ runner.temp }}
+        RXQLITED_DIR: ${{ github.workspace }}/target/${{ env.TARGET_TRIPLE }}/release
+    - name: Test(Windows)
+      if: matrix.os == 'windows-latest'
+      run: cargo test --release --target ${{ env.TARGET_TRIPLE }} -- --nocapture
+      env:
+        CARGO_TERM_COLOR: always
+        TEMP: ${{ runner.temp }}
+        RXQLITED_DIR: ${{ github.workspace }}/target/${{ env.TARGET_TRIPLE }}/release
