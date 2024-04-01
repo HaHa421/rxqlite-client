@@ -564,14 +564,14 @@ impl RXQLiteClient {
         };
 
         let resp = if let Some(r) = req {
-            println!(
+            tracing::debug!(
                 ">>> client send request to {}: {}",
                 url,
                 serde_json::to_string_pretty(&r).unwrap()
             );
             self.inner.post(url.clone()).json(r)
         } else {
-            println!(">>> client send request to {}", url,);
+            tracing::debug!(">>> client send request to {}", url,);
             self.inner.get(url.clone())
         }
         .send()
@@ -582,7 +582,7 @@ impl RXQLiteClient {
             .json()
             .await
             .map_err(|_e| RPCError::Network/*(NetworkError::new(&e))*/)?;
-        println!(
+        tracing::debug!(
             "<<< client recv reply from {}: {}",
             url,
             serde_json::to_string_pretty(&res).unwrap()

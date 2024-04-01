@@ -1,6 +1,6 @@
 [package]
 name = "rxqlite-client"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 readme = "README.md"
 authors = [
@@ -17,17 +17,18 @@ repository = "https://github.com/HaHa421/rxqlite-client"
 
 [dependencies]
 anyhow = "1"
-thiserror = "1.0.58"
+futures = { version = "0.3.30" , optional = true}
 futures-util= { version = "0.3.30" , features = [ "sink" ] }
 reqwest = { version = "0.12", default-features=false , features = ["json" , "rustls-tls" ,"http2" ] }
 rustls = {version = "0.22" }
 serde = { version = "1.0.114", features = ["derive"] }
 serde_json = "1.0"
+thiserror = "1.0.58"
 tokio = { version = "1.37", features = ["full"] }
 tokio-rustls = "0.26"
 tokio-util = { version = "0.7" , features = [ "codec" ] }
+tracing = "0.1.40"
 
-futures = { version = "0.3.30" , optional = true}
 
 [dependencies.rxqlite-lite-common]
 version = "0.1"
@@ -53,6 +54,13 @@ test-dependency = ["rxqlite-tests-common" , "futures" ]
 [dev-dependencies]
 anyhow = "1"
 futures = { version = "0.3.30" }
-rxqlite-tests-common = { version = "0.1.7" } #, path = "../rxqlite/crates/rxqlite-tests-common" }
-rxqlite-common = { version = "0.1" } #, path = "../rxqlite/crates/rxqlite-common" }
 chrono = "0.4"
+
+[dev-dependencies.rxqlite-tests-common]
+version = "0.1.7"
+#path = "../rxqlite/crates/rxqlite-tests-common"
+
+[dev-dependencies.rxqlite-common]
+version = "0.1"
+#path = "../rxqlite/crates/rxqlite-common"
+
