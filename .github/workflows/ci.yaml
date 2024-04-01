@@ -33,7 +33,7 @@ jobs:
     
 
   build:
-    depends: download-latest-rxqlited
+    needs: download-latest-rxqlited
     strategy:
       matrix:
         os: [windows-latest,ubuntu-latest] 
