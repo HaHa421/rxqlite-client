@@ -31,7 +31,7 @@ jobs:
       
     - name: Download rxqlite binaries
       run: |
-        wget https://github.com/HaHa421/rxqlite/releases/latest/download/{{ env.RXQLITED_ARCHIVE }}
+        wget https://github.com/HaHa421/rxqlite/releases/latest/download/${{ env.RXQLITED_ARCHIVE }}
     
     
       
@@ -41,7 +41,7 @@ jobs:
       
     - name: Extract and move binaries
       run: |
-        unzip {{ env.RXQLITED_ARCHIVE }} -d ${{ github.workspace }}/target/${{ env.TARGET_TRIPLE }}/release
+        unzip ${{ env.RXQLITED_ARCHIVE }} -d ${{ github.workspace }}/target/${{ env.TARGET_TRIPLE }}/release
         
     
     - name: Verify rxqlited exists(Ubuntu)
