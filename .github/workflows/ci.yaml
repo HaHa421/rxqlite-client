@@ -29,11 +29,15 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: echo "RXQLITED_ARCHIVE=rxqlited-win32.zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append    
       
-    - name: Download rxqlite binaries
+    - name: Download rxqlite binaries(Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
       run: |
         wget https://github.com/HaHa421/rxqlite/releases/latest/download/${{ env.RXQLITED_ARCHIVE }}
     
-    
+    - name: Download rxqlite binaries(Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        curl -L -O https://github.com/HaHa421/rxqlite/releases/latest/download/${{ env.RXQLITED_ARCHIVE }}
       
     - name: Create rxqlited destination directories
       run: |
