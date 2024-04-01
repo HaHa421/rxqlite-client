@@ -58,10 +58,7 @@ jobs:
     - name: Verify rxqlited exists(Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        if [ ! -f ${{ github.workspace }}/target/${{ env.TARGET_TRIPLE }}/release/rxqlited.exe ]; then
-          echo "Error: rxqlited.exe not found"
-          exit 1
-        fi
+        if (!(Test-Path ${{ github.workspace }}/target/${{ env.TARGET_TRIPLE }}/release/rxqlited.exe)) { exit 1 }
         
     - uses: ilammy/msvc-dev-cmd@v1
     
