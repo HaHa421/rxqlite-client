@@ -52,7 +52,7 @@ jobs:
           exit 1
         fi
     - name: Verify rxqlited exists(Windows)
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'windows-latest'
       run: |
         if [ ! -f ${{ github.workspace }}/target/${{ env.TARGET_TRIPLE }}/release/rxqlited.exe ]; then
           echo "Error: rxqlited.exe not found"
