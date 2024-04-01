@@ -21,19 +21,19 @@ futures = { version = "0.3.30" , optional = true}
 
 [dependencies.rxqlite-lite-common]
 version = "0.1"
-path = "../rxqlite/crates/rxqlite-lite-common"
+#path = "../rxqlite/crates/rxqlite-lite-common"
 
 [dependencies.rxqlite-common]
 version = "0.1"
-path = "../rxqlite/crates/rxqlite-common"
+#path = "../rxqlite/crates/rxqlite-common"
 
 [dependencies.rxqlite-notification]
 version = "0.1"
-path = "../rxqlite/crates/rxqlite-notification"
+#path = "../rxqlite/crates/rxqlite-notification"
 
 [dependencies.rxqlite-tests-common]
 version = "0.1.7"
-path = "../rxqlite/crates/rxqlite-tests-common" 
+#path = "../rxqlite/crates/rxqlite-tests-common" 
 optional = true
 
 
@@ -43,6 +43,6 @@ test-dependency = ["rxqlite-tests-common" , "futures" ]
 [dev-dependencies]
 anyhow = "1"
 futures = { version = "0.3.30" }
-rxqlite-tests-common = { version = "0.1.7", path = "../rxqlite/crates/rxqlite-tests-common" }
-rxqlite-common = { version = "0.1", path = "../rxqlite/crates/rxqlite-common" }
+rxqlite-tests-common = { version = "0.1.7" } #, path = "../rxqlite/crates/rxqlite-tests-common" }
+rxqlite-common = { version = "0.1" } #, path = "../rxqlite/crates/rxqlite-common" }
 chrono = "0.4"
