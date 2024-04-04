@@ -1,3 +1,7 @@
+#![deny(warnings)]
+#![deny(unused_crate_dependencies)]
+#![deny(unused_extern_crates)]
+
 use std::collections::BTreeSet;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -8,92 +12,16 @@ use serde::de::DeserializeOwned;
 //use serde::Deserialize;
 use serde::Serialize;
 
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration};
 //use tokio::io::{AsyncReadExt,AsyncWriteExt};
-use tokio::net::TcpStream;
-use tokio_rustls::TlsConnector;
-use tokio_util::bytes::BytesMut;
-use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
-
-use futures_util::stream::StreamExt;
-use futures_util::SinkExt;
-use tokio::io::split;
-use tokio::io::{ReadHalf, WriteHalf};
-use tokio_rustls::rustls::ClientConfig;
-use tokio_rustls::rustls::RootCertStore;
-
-//use rxqlite_lite_notification::{NotificationEvent, NotificationRequest};
-use serde_json::{from_slice, to_vec};
-//use rxqlite_notification::*;
-
 pub type Request = rxqlite_common::Message;
-//pub type RXQLiteError = anyhow::Error;
-//pub type Response = Option<rxqlite_common::MessageResponse>;
-use rxqlite_common::{/*Message, MessageResponse,*/ /*RSQliteClientTlsConfig,*/ Rows/*, Value*/};
 
 #[cfg(any(test,feature = "test-dependency"))]
 pub mod tests;
 
-//use crate::ConnectOptions;
-
-#[derive(Debug)]
-struct AllowAnyCertVerifier;
-
-impl tokio_rustls::rustls::client::danger::ServerCertVerifier for AllowAnyCertVerifier {
-    fn verify_server_cert(
-        &self,
-        _end_entity: &tokio_rustls::rustls::pki_types::CertificateDer<'_>,
-        _intermediates: &[tokio_rustls::rustls::pki_types::CertificateDer<'_>],
-        _server_name: &tokio_rustls::rustls::pki_types::ServerName<'_>,
-        _ocsp_response: &[u8],
-        _now: tokio_rustls::rustls::pki_types::UnixTime,
-    ) -> Result<tokio_rustls::rustls::client::danger::ServerCertVerified, tokio_rustls::rustls::Error>
-    {
-        Ok(tokio_rustls::rustls::client::danger::ServerCertVerified::assertion())
-    }
-    fn verify_tls12_signature(
-        &self,
-        _message: &[u8],
-        _cert: &tokio_rustls::rustls::pki_types::CertificateDer<'_>,
-        _dss: &tokio_rustls::rustls::DigitallySignedStruct,
-    ) -> Result<
-        tokio_rustls::rustls::client::danger::HandshakeSignatureValid,
-        tokio_rustls::rustls::Error,
-    > {
-        Ok(tokio_rustls::rustls::client::danger::HandshakeSignatureValid::assertion())
-    }
-    fn verify_tls13_signature(
-        &self,
-        _message: &[u8],
-        _cert: &tokio_rustls::rustls::pki_types::CertificateDer<'_>,
-        _dss: &tokio_rustls::rustls::DigitallySignedStruct,
-    ) -> Result<
-        tokio_rustls::rustls::client::danger::HandshakeSignatureValid,
-        tokio_rustls::rustls::Error,
-    > {
-        Ok(tokio_rustls::rustls::client::danger::HandshakeSignatureValid::assertion())
-    }
-    fn supported_verify_schemes(&self) -> Vec<tokio_rustls::rustls::SignatureScheme> {
-        vec![
-            tokio_rustls::rustls::SignatureScheme::RSA_PKCS1_SHA1,
-            tokio_rustls::rustls::SignatureScheme::ECDSA_SHA1_Legacy,
-            tokio_rustls::rustls::SignatureScheme::RSA_PKCS1_SHA256,
-            tokio_rustls::rustls::SignatureScheme::ECDSA_NISTP256_SHA256,
-            tokio_rustls::rustls::SignatureScheme::RSA_PKCS1_SHA384,
-            tokio_rustls::rustls::SignatureScheme::ECDSA_NISTP384_SHA384,
-            tokio_rustls::rustls::SignatureScheme::RSA_PKCS1_SHA512,
-            tokio_rustls::rustls::SignatureScheme::ECDSA_NISTP521_SHA512,
-            tokio_rustls::rustls::SignatureScheme::RSA_PSS_SHA256,
-            tokio_rustls::rustls::SignatureScheme::RSA_PSS_SHA384,
-            tokio_rustls::rustls::SignatureScheme::RSA_PSS_SHA512,
-            tokio_rustls::rustls::SignatureScheme::ED25519,
-            tokio_rustls::rustls::SignatureScheme::ED448,
-        ]
-    }
-}
-
 //use crate::TypeConfig;
 
+use rxqlite_common::{Message, MessageResponse, RSQliteClientTlsConfig, Rows, Value};
 
 
 pub struct RXQLiteClientBuilder {
@@ -154,117 +82,6 @@ impl RXQLiteClientBuilder {
     }
 }
 
-pub enum NetStream {
-    Tls(
-        FramedWrite<WriteHalf<tokio_rustls::client::TlsStream<TcpStream>>, LengthDelimitedCodec>,
-        FramedRead<ReadHalf<tokio_rustls::client::TlsStream<TcpStream>>, LengthDelimitedCodec>,
-    ),
-    Tcp(
-        FramedWrite<WriteHalf<TcpStream>, LengthDelimitedCodec>,
-        FramedRead<ReadHalf<TcpStream>, LengthDelimitedCodec>,
-    ),
-}
-
-impl From<tokio_rustls::client::TlsStream<TcpStream>> for NetStream {
-    fn from(stream: tokio_rustls::client::TlsStream<TcpStream>) -> Self {
-        let (reader, writer) = split(stream);
-        Self::Tls(
-            FramedWrite::new(writer, LengthDelimitedCodec::new()),
-            FramedRead::new(reader, LengthDelimitedCodec::new()),
-        )
-    }
-}
-
-impl From<TcpStream> for NetStream {
-    fn from(stream: TcpStream) -> Self {
-        let (reader, writer) = split(stream);
-        Self::Tcp(
-            FramedWrite::new(writer, LengthDelimitedCodec::new()),
-            FramedRead::new(reader, LengthDelimitedCodec::new()),
-        )
-    }
-}
-
-impl NetStream {
-    pub async fn write(&mut self, notification_request: NotificationRequest) -> anyhow::Result<()> {
-        let message = to_vec(&notification_request)?;
-        match self {
-            Self::Tls(framed_write, _) => {
-                framed_write
-                    .send(BytesMut::from(message.as_slice()).freeze())
-                    .await?;
-            }
-            Self::Tcp(framed_write, _) => {
-                framed_write
-                    .send(BytesMut::from(message.as_slice()).freeze())
-                    .await?;
-            }
-        }
-        Ok(())
-    }
-    pub async fn read(&mut self) -> anyhow::Result<NotificationEvent> {
-        match self {
-            Self::Tls(_, length_delimited_stream) => {
-                let message = length_delimited_stream.next().await;
-                if let Some(message) = message {
-                    let message: BytesMut = message?;
-                    let message: NotificationEvent = from_slice(&message)?;
-                    Ok(message)
-                } else {
-                    Err(anyhow::anyhow!("stream closed"))
-                }
-            }
-            Self::Tcp(_, length_delimited_stream) => {
-                let message = length_delimited_stream.next().await;
-                if let Some(message) = message {
-                    let message: BytesMut = message?;
-                    let message: NotificationEvent = from_slice(&message)?;
-                    Ok(message)
-                } else {
-                    Err(anyhow::anyhow!("stream closed"))
-                }
-            }
-        }
-    }
-    pub async fn read_timeout(
-        &mut self,
-        timeout_duration: Duration,
-    ) -> anyhow::Result<Option<NotificationEvent>> {
-        match self {
-            Self::Tls(_, length_delimited_stream) => {
-                let res = timeout(timeout_duration, length_delimited_stream.next()).await;
-                match res {
-                    Ok(message) => {
-                        if let Some(message) = message {
-                            let message: BytesMut = message?;
-                            let message: NotificationEvent = from_slice(&message)?;
-                            Ok(Some(message))
-                        } else {
-                            Ok(None)
-                        }
-                    }
-                    Err(_) => Ok(None),
-                }
-            }
-            Self::Tcp(_, length_delimited_stream) => {
-                let res = timeout(timeout_duration, length_delimited_stream.next()).await;
-                match res {
-                    Ok(message) => {
-                        if let Some(message) = message {
-                            let message: BytesMut = message?;
-                            let message: NotificationEvent = from_slice(&message)?;
-                            Ok(Some(message))
-                        } else {
-                            Ok(None)
-                        }
-                    }
-                    Err(_) => Ok(None),
-                }
-            }
-        }
-    }
-}
-
 pub struct RXQLiteClient {
     /// The leader node to send request to.
     ///
@@ -286,6 +103,7 @@ pub struct RXQLiteClient {
 }
 
 impl RXQLiteClient {
+    /*
     pub fn with_options(options: &ConnectOptions) -> Self {
         let mut inner = ClientBuilder::new();
         let accept_invalid_certificates = if let Some(tls_config) = options.tls_config.as_ref() {
@@ -317,7 +135,7 @@ impl RXQLiteClient {
             accept_invalid_certificates,
         }
     }
-
+    */
     /// Create a client with a leader node id and a node manager to get node address by node id.
     pub fn new(node_id: NodeId, node_addr: &str) -> Self {
         Self {
@@ -688,58 +506,13 @@ impl RXQLiteClient {
         if self.notification_stream.is_some() {
             return Ok(());
         }
-        if self.use_tls {
-            let root_certs = RootCertStore::empty();
-            let mut config/*: rustls::ConfigBuilder<ClientConfig,rustls::WantsVersions>*/= ClientConfig::builder()
-        .with_root_certificates(root_certs)
-        .with_no_client_auth();
-            if self.accept_invalid_certificates {
-                config
-                    .dangerous()
-                    .set_certificate_verifier(Arc::new(AllowAnyCertVerifier));
-            }
-
-            let connector = TlsConnector::from(Arc::new(config));
-            let server_name = rustls::pki_types::ServerName::try_from(
-                notifications_addr.split(":").next().unwrap(),
-            )?;
-            let stream = TcpStream::connect(notifications_addr).await?;
-            let tls_stream = connector.connect(server_name.to_owned(), stream).await?;
-            let mut notification_stream = NetStream::from(tls_stream);
-            notification_stream
-                .write(NotificationRequest::Register)
-                .await?;
-            self.notification_stream = Some(notification_stream);
-            Ok(())
-        } else {
-            let stream = TcpStream::connect(notifications_addr).await?;
-            let mut notification_stream = NetStream::from(stream);
-            notification_stream
-                .write(NotificationRequest::Register)
-                .await?;
-            self.notification_stream = Some(notification_stream);
-            Ok(())
-        }
-    }
-}
-
-
-pub use rxqlite_common::{Message, MessageResponse, Value,RSQliteClientTlsConfig};
-//pub use rxqlite_lite_common::ConnectOptions;
-pub type RXQLiteError = anyhow::Error;
-pub use RXQLiteClient as Connection;
-pub use rxqlite_common::FromValueRef;
-
-#[derive(Default, Debug, Clone)]
-pub struct ConnectOptions {
-    pub leader_id: NodeId,
-    pub leader_host: String,
-    pub leader_port: u16,
-    pub tls_config: Option<RSQliteClientTlsConfig>,
-}
-
-impl ConnectOptions {
-    pub async fn connect(&self) -> Result<RXQLiteClient, RXQLiteError> {
-        Ok(RXQLiteClient::with_options(self))
+        let mut notification_stream = NetStream::new(notifications_addr,
+          if self.use_tls {Some(self.accept_invalid_certificates)} else {None}).await?;
+        
+        notification_stream
+          .write(NotificationRequest::Register)
+          .await?;
+        self.notification_stream = Some(notification_stream);
+        Ok(())
     }
 }
