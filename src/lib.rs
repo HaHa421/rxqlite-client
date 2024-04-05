@@ -394,12 +394,12 @@ impl RXQLiteClient {
         }
         .send()
         .await
-        .map_err(|_e| RPCError::Network/*(NetworkError::new(&e))*/)?;
+        .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
 
         let res: Result<Resp, Err> = resp
             .json()
             .await
-            .map_err(|_e| RPCError::Network/*(NetworkError::new(&e))*/)?;
+            .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
         tracing::debug!(
             "<<< client recv reply from {}: {}",
             url,
