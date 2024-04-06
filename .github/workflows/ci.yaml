@@ -88,14 +88,14 @@ jobs:
     
     - name: Test(Ubuntu)
       if: matrix.os == 'ubuntu-latest'
-      run: cargo test --release --target ${{ env.TARGET_TRIPLE }} -- --nocapture
+      run: cargo test --release --target ${{ env.TARGET_TRIPLE }} -- --nocapture --test-threads=1
       env:
         CARGO_TERM_COLOR: always
         TMPDIR: ${{ runner.temp }}
         RXQLITED_DIR: ${{ github.workspace }}/target/${{ env.TARGET_TRIPLE }}/release
     - name: Test(Windows)
       if: matrix.os == 'windows-latest'
-      run: cargo test --release --target ${{ env.TARGET_TRIPLE }} -- --nocapture
+      run: cargo test --release --target ${{ env.TARGET_TRIPLE }} -- --nocapture --test-threads=1
       env:
         CARGO_TERM_COLOR: always
         TEMP: ${{ runner.temp }}
