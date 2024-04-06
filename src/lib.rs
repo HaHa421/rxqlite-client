@@ -159,7 +159,7 @@ impl RXQLiteClient {
     pub async fn sql(
         &self,
         req: &Request,
-    ) -> Result<ClientWriteResponse, RPCError<ClientWriteError>> {
+    ) -> Result<ClientWriteResponse, RPCError<RaftError<ClientWriteError>>> {
         self.send_rpc_to_leader("lite-api/sql", Some(req)).await
     }
     
@@ -168,10 +168,10 @@ impl RXQLiteClient {
         req: &Request,
         mut retries: usize,
         delay_between_retries: Duration,
-    ) -> Result<ClientWriteResponse, RPCError<ClientWriteError>> {
+    ) -> Result<ClientWriteResponse, RPCError<RaftError<ClientWriteError>>> {
         retries += 1;
         loop {
-          let res: Result<ClientWriteResponse, RPCError<ClientWriteError>> =
+          let res: Result<ClientWriteResponse, RPCError<RaftError<ClientWriteError>>> =
             self.send_rpc_to_leader("lite-api/sql", Some(req)).await;
           match res {
             Ok(res)=>return Ok(res),
@@ -207,7 +207,7 @@ impl RXQLiteClient {
     pub async fn consistent_sql(
         &self,
         req: &Request,
-    ) -> Result<ClientWriteResponse, RPCError<ClientWriteError>> {
+    ) -> Result<ClientWriteResponse, RPCError<RaftError<ClientWriteError>>> {
         self.send_rpc_to_leader("lite-api/sql-consistent", Some(req))
             .await
     }
@@ -217,7 +217,7 @@ impl RXQLiteClient {
         arguments: Vec<Value>,
     ) -> Result<Rows, RXQLiteError> {
         let req = Message::Execute(query.into(), arguments);
-        let res: Result<ClientWriteResponse, RPCError<ClientWriteError>> = self
+        let res: Result<ClientWriteResponse, RPCError<RaftError<ClientWriteError>>> = self
             .send_rpc_to_leader("lite-api/sql-consistent", Some(&req))
             .await;
         match res {
@@ -237,7 +237,7 @@ impl RXQLiteClient {
         arguments: Vec<Value>,
     ) -> Result<Rows, RXQLiteError> {
         let req = Message::Fetch(query.into(), arguments);
-        let res: Result<ClientWriteResponse, RPCError<ClientWriteError>> = self
+        let res: Result<ClientWriteResponse, RPCError<RaftError<ClientWriteError>>> = self
             .send_rpc_to_leader("lite-api/sql-consistent", Some(&req))
             .await;
         match res {
@@ -257,7 +257,7 @@ impl RXQLiteClient {
         arguments: Vec<Value>,
     ) -> Result<rxqlite_common::Row, RXQLiteError> {
         let req = Message::FetchOne(query.into(), arguments);
-        let res: Result<ClientWriteResponse, RPCError<ClientWriteError>> = self
+        let res: Result<ClientWriteResponse, RPCError<RaftError<ClientWriteError>>> = self
             .send_rpc_to_leader("lite-api/sql-consistent", Some(&req))
             .await;
         match res {
@@ -283,7 +283,7 @@ impl RXQLiteClient {
         arguments: Vec<Value>,
     ) -> Result<Option<rxqlite_common::Row>, RXQLiteError> {
         let req = Message::FetchOptional(query.into(), arguments);
-        let res: Result<ClientWriteResponse, RPCError<ClientWriteError>> = self
+        let res: Result<ClientWriteResponse, RPCError<RaftError<ClientWriteError>>> = self
             .send_rpc_to_leader("lite-api/sql-consistent", Some(&req))
             .await;
         match res {
@@ -312,7 +312,7 @@ impl RXQLiteClient {
     pub async fn add_learner(
         &self,
         req: (NodeId, String, String),
-    ) -> Result<ClientWriteResponse, RPCError<ClientWriteError>> {
+    ) -> Result<ClientWriteResponse, RPCError<RaftError<ClientWriteError>>> {
         self.send_rpc_to_leader("lite-cluster/add-learner", Some(&req))
             .await
     }
@@ -324,7 +324,7 @@ impl RXQLiteClient {
     pub async fn change_membership(
         &self,
         req: &BTreeSet<NodeId>,
-    ) -> Result<ClientWriteResponse, RPCError<ClientWriteError>> {
+    ) -> Result<ClientWriteResponse, RPCError<RaftError<ClientWriteError>>> {
         self.send_rpc_to_leader("lite-cluster/change-membership", Some(req))
             .await
     }
