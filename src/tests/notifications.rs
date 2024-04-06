@@ -379,6 +379,11 @@ fn do_notifications3(test_name: &str,
                   }
               //_other=>panic!("unexpected message"),
             }
+            let message = notification_stream
+              .read_timeout(NOTIFICATIONS_READ_TIMEOUT/16)
+              .await
+                .unwrap();
+            assert!(message.is_none());
             client
                 .stop_listening_for_notifications()
                 .await
