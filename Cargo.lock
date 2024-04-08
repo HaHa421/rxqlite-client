@@ -42,6 +42,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyerror"
+version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bcd04a72664a65fb9adeae7ced0c98efd68a2b7a45adda8319b3bb36538404b8"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "anyhow"
 version = "1.0.81"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -99,6 +108,12 @@ name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
+
+[[package]]
+name = "base64"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9475866fec1451be56a3c2400fd081ff546538961565ccb5b7142cbd22bc7a51"
 
 [[package]]
 name = "bindgen"
@@ -858,7 +873,7 @@ version = "3.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b8fcc794035347fb64beda2d3b462595dd2753e3f268d89c5aae77e8cf2c310"
 dependencies = [
- "base64",
+ "base64 0.21.7",
  "serde",
 ]
 
@@ -1001,11 +1016,11 @@ checksum = "adad44e29e4c806119491a7f06f03de4d1af22c3a680dd47f1e6e179439d1f56"
 
 [[package]]
 name = "reqwest"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d66674f2b6fb864665eea7a3c1ac4e3dfacd2fda83cf6f935a612e01b0e3338"
+checksum = "3e6cc1e89e689536eb5aeede61520e874df5a4707df811cd5da4aa5fbb2aae19"
 dependencies = [
- "base64",
+ "base64 0.22.0",
  "bytes",
  "futures-core",
  "futures-util",
@@ -1121,11 +1136,12 @@ dependencies = [
 
 [[package]]
 name = "rustls-pemfile"
-version = "1.0.4"
+version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c74cae0a4cf6ccbbf5f359f08efdf8ee7e1dc532573bf0db71968cb56b1448c"
+checksum = "29993a25686778eb88d4189742cd713c9bce943bc54251a33509dc63cbacf73d"
 dependencies = [
- "base64",
+ "base64 0.22.0",
+ "rustls-pki-types",
 ]
 
 [[package]]
@@ -1154,18 +1170,45 @@ checksum = "7ffc183a10b4478d04cbbbfc96d0873219d962dd5accaff2ffbd4ceb7df837f4"
 
 [[package]]
 name = "rxqlite-client"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "chrono",
  "futures",
- "futures-util",
  "reqwest",
- "rustls 0.22.3",
  "rxqlite-common",
  "rxqlite-lite-common",
  "rxqlite-notification",
  "rxqlite-tests-common",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "rxqlite-common"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60039643a1af87239256d24771fbe2249570468baa100d066f134930d07cd1dc"
+dependencies = [
+ "chrono",
+ "serde",
+]
+
+[[package]]
+name = "rxqlite-lite-common"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ebff1f38faeef36578380fabb20bfe824d6be194bfedca98dba8d8860698bfc7"
+dependencies = [
+ "anyerror",
+ "anyhow",
+ "derive_more",
+ "futures-util",
+ "rustls 0.22.3",
+ "rxqlite-common",
+ "rxqlite-notification",
  "serde",
  "serde_json",
  "thiserror",
@@ -1175,36 +1218,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "rxqlite-common"
-version = "0.1.3"
-dependencies = [
- "chrono",
- "serde",
-]
-
-[[package]]
-name = "rxqlite-lite-common"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "derive_more",
- "rxqlite-common",
- "rxqlite-notification",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "rxqlite-notification"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d179ae38b166ed88fe1593abcbbda8b389b61d515bf084a16fe41f358e952ec0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "rxqlite-tests-common"
-version = "0.1.7"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c83a44550995ecf121da8f3f0fa7c321e74869d116c22384d7aa9be1c6e09e5"
 dependencies = [
  "anyhow",
  "nix",
@@ -1934,9 +1960,9 @@ checksum = "32b752e52a2da0ddfbdbcc6fceadfeede4c939ed16d13e648833a61dfb611ed8"
 
 [[package]]
 name = "winreg"
-version = "0.50.0"
+version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "524e57b2c537c0f9b1e69f1965311ec12182b4122e45035b1508cd24d2adadb1"
+checksum = "a277a57398d4bfa075df44f501a17cfdf8542d224f0d36095a2adc7aee4ef0a5"
 dependencies = [
  "cfg-if",
  "windows-sys 0.48.0",
