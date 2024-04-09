@@ -21,14 +21,10 @@ pub mod consts;
 #[cfg(not(feature = "test-dependency"))]
 pub mod notifications;
 
+#[cfg(not(feature = "test-dependency"))]
+pub mod table_notifications;
 
-#[cfg(target_os = "windows")]
-const EXE_SUFFIX: &str = ".exe";
-
-#[cfg(not(target_os = "windows"))]
-const EXE_SUFFIX: &str = "";
-
-
+use std::env::consts::EXE_SUFFIX;
 
 pub fn get_cluster_manager(
     test_name: &str,

@@ -76,10 +76,128 @@ impl RXQLiteClientBuilder {
             leader: Arc::new(Mutex::new((self.node_id, self.node_addr))),
             inner,
             use_tls,
-            notification_stream: None,
-            accept_invalid_certificates: self.accept_invalid_certificates,
+            //accept_invalid_certificates: self.accept_invalid_certificates,
+            notification_stream_manager: NetStreamManager::new(use_tls,self.accept_invalid_certificates),
+            
         }
     }
+}
+
+//#[derive(Default)]
+pub struct NetStreamManager {
+  pub listening_for_any_notifications: bool,
+  pub listened_tables: BTreeSet<String>,
+  pub notification_stream: Option<NetStream>,
+  pub use_tls: bool,
+  pub accept_invalid_certificates: bool,
+}
+
+impl NetStreamManager {
+  fn new(use_tls: bool,
+    accept_invalid_certificates: bool)-> Self {
+    Self {
+      listening_for_any_notifications: false,
+      listened_tables: Default::default(),
+      notification_stream : None,
+      use_tls,
+      accept_invalid_certificates,
+    }
+  }
+}
+
+impl NetStreamManager {
+    pub fn stop_listening_for_all(&mut self) {
+      //server will do what needs to be done
+      self.notification_stream.take();
+      self.listened_tables.clear();
+      self.listening_for_any_notifications=false;
+    }
+    fn is_listening(&self)->bool {
+      self.listening_for_any_notifications || self.listened_tables.len() > 0
+    }
+    pub async fn stop_listening_for_notifications(&mut self) -> anyhow::Result<()> {
+        if self.notification_stream.is_none() {
+            return Ok(());
+        }
+        if let Err(err) = self.notification_stream
+            .as_mut()
+            .unwrap()
+            .write(NotificationRequest::Unregister)
+            .await {
+          self.stop_listening_for_all();
+          return Err(err.into());
+        }
+        self.listening_for_any_notifications=false;
+        if !self.is_listening() {
+          self.notification_stream.take();
+          
+        }
+        Ok(())
+    }
+    pub async fn start_listening_for_notifications(
+        &mut self,
+        notifications_addr: &str,
+    ) -> anyhow::Result<()> {
+        if self.listening_for_any_notifications {
+          return Ok(());
+        }
+        if self.notification_stream.is_none() {
+          let notification_stream = NetStream::new(notifications_addr,
+            if self.use_tls {Some(self.accept_invalid_certificates)} else {None}).await?;
+          self.notification_stream = Some(notification_stream);
+        }
+        if let Err(err) = self.notification_stream.as_mut().unwrap()
+          .write(NotificationRequest::Register)
+          .await {
+            self.stop_listening_for_all();
+            return Err(err.into());
+        }
+        self.listening_for_any_notifications=true;
+        Ok(())
+    }
+    
+    pub async fn stop_listening_for_table_notifications(&mut self,table: &String) -> anyhow::Result<()> {
+        if !self.listened_tables.contains(table) {
+            return Ok(());
+        }
+        if let Err(err) = self.notification_stream
+            .as_mut()
+            .unwrap()
+            .write(NotificationRequest::UnregisterForTable(table.clone()))
+            .await {
+          self.stop_listening_for_all();
+          return Err(err.into());
+        }
+        self.listened_tables.remove(table);
+        if !self.is_listening() {
+          self.notification_stream.take();
+          
+        }
+        Ok(())
+    }
+    pub async fn start_listening_for_table_notifications(
+        &mut self,
+        notifications_addr: &str,
+        table:& String,
+    ) -> anyhow::Result<()> {
+        if self.listened_tables.contains(table) {
+            return Ok(());
+        }
+        if self.notification_stream.is_none() {
+          let notification_stream = NetStream::new(notifications_addr,
+            if self.use_tls {Some(self.accept_invalid_certificates)} else {None}).await?;
+          self.notification_stream = Some(notification_stream);
+        }
+        if let Err(err) = self.notification_stream.as_mut().unwrap()
+          .write(NotificationRequest::RegisterForTable(table.clone()))
+          .await {
+            self.stop_listening_for_all();
+            return Err(err.into());
+        }
+        self.listened_tables.insert(table.clone());
+        Ok(())
+    }
+    
 }
 
 pub struct RXQLiteClient {
@@ -95,11 +213,11 @@ pub struct RXQLiteClient {
 
     pub inner: Client,
 
-    pub use_tls: bool,
+    use_tls: bool,
 
-    pub accept_invalid_certificates: bool,
+    //accept_invalid_certificates: bool,
 
-    pub notification_stream: Option<NetStream>,
+    pub notification_stream_manager: NetStreamManager,
 }
 
 impl RXQLiteClient {
@@ -143,8 +261,8 @@ impl RXQLiteClient {
             leader: Arc::new(Mutex::new((node_id, node_addr.into()))),
             inner: Client::new(),
             use_tls: false,
-            notification_stream: None,
-            accept_invalid_certificates: false,
+            //accept_invalid_certificates: false,
+            notification_stream_manager: NetStreamManager::new(false,false),
         }
     }
 
@@ -487,32 +605,5 @@ impl RXQLiteClient {
 }
 
 impl RXQLiteClient {
-    pub async fn stop_listening_for_notifications(&mut self) -> anyhow::Result<()> {
-        if self.notification_stream.is_none() {
-            return Ok(());
-        }
-        self.notification_stream
-            .as_mut()
-            .unwrap()
-            .write(NotificationRequest::Unregister)
-            .await?;
-        self.notification_stream.take();
-        Ok(())
-    }
-    pub async fn start_listening_for_notifications(
-        &mut self,
-        notifications_addr: &str,
-    ) -> anyhow::Result<()> {
-        if self.notification_stream.is_some() {
-            return Ok(());
-        }
-        let mut notification_stream = NetStream::new(notifications_addr,
-          if self.use_tls {Some(self.accept_invalid_certificates)} else {None}).await?;
-        
-        notification_stream
-          .write(NotificationRequest::Register)
-          .await?;
-        self.notification_stream = Some(notification_stream);
-        Ok(())
-    }
+    
 }

@@ -23,7 +23,7 @@ fn do_notifications(test_name: &str,
         let client = tm.clients.get_mut(&1).unwrap();
 
         client.notification_stream_manager
-            .start_listening_for_notifications(&notifications_addr)
+            .start_listening_for_table_notifications(&notifications_addr,&"_test_user2_".into())
             .await
             .unwrap();
 
@@ -48,6 +48,29 @@ fn do_notifications(test_name: &str,
             MessageResponse::Rows(rows) => assert!(rows.len() == 0),
             MessageResponse::Error(err) => panic!("{}", err),
         }
+        
+        let message = Message::Execute(
+            "CREATE TABLE IF NOT EXISTS _test_user2_ (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      birth_date DATETIME NOT NULL
+      )"
+            .into(),
+            vec![],
+        );
+        let response = client.sql_with_retries_and_delay(&message,
+          LEADER_VACATION_RETRIES,
+          DELAY_BETWEEN_LEADER_VACATION_RETRIES,
+        ).await.unwrap();
+        
+        
+
+        let message = response.data.unwrap();
+        match message {
+            MessageResponse::Rows(rows) => assert!(rows.len() == 0),
+            MessageResponse::Error(err) => panic!("{}", err),
+        }
+        
         let name = "Ha";
         let birth_date = Utc::now();
         let message = Message::Execute(
@@ -63,7 +86,21 @@ fn do_notifications(test_name: &str,
             MessageResponse::Rows(rows) => assert!(rows.len() == 0),
             MessageResponse::Error(err) => panic!("{}", err),
         }
-
+        
+        let message = Message::Execute(
+              "INSERT INTO _test_user2_ (name,birth_date) VALUES (?,?)".into(),
+              vec![name.into(), birth_date.into()],
+        );
+        let response = client.sql_with_retries_and_delay(&message,
+          LEADER_VACATION_RETRIES,
+          DELAY_BETWEEN_LEADER_VACATION_RETRIES,
+        ).await.unwrap();
+        let message = response.data.unwrap();
+        match message {
+            MessageResponse::Rows(rows) => assert!(rows.len() == 0),
+            MessageResponse::Error(err) => panic!("{}", err),
+        }
+          
         //tm.wait_for_last_applied_log(response.log_id,60).await.unwrap();
 
         // now we check for notification, will do with this:
@@ -83,12 +120,26 @@ fn do_notifications(test_name: &str,
             }) => {
                 assert_eq!(action, Action::SQLITE_INSERT);
                 assert_eq!(&database, "main");
-                assert_eq!(&table, "_test_user_");
+                assert_eq!(&table, "_test_user2_");
                 row_id
             }
         };
         let message = Message::Execute(
             "DELETE FROM _test_user_ WHERE name = ?".into(),
+            vec![name.into()],
+        );
+        let response = client.sql_with_retries_and_delay(&message,
+          LEADER_VACATION_RETRIES,
+          DELAY_BETWEEN_LEADER_VACATION_RETRIES,
+        ).await.unwrap();
+        let message = response.data.unwrap();
+        match message {
+            MessageResponse::Rows(rows) => assert!(rows.len() == 0),
+            MessageResponse::Error(err) => panic!("{}", err),
+        }
+        
+        let message = Message::Execute(
+            "DELETE FROM _test_user2_ WHERE name = ?".into(),
             vec![name.into()],
         );
         let response = client.sql_with_retries_and_delay(&message,
@@ -115,7 +166,7 @@ fn do_notifications(test_name: &str,
             }) => {
                 assert_eq!(action, Action::SQLITE_DELETE);
                 assert_eq!(&database, "main");
-                assert_eq!(&table, "_test_user_");
+                assert_eq!(&table, "_test_user2_");
                 assert_eq!(insert_row_id,row_id);
             }
         }
@@ -140,16 +191,35 @@ fn do_notifications2(test_name: &str,
         const MAX_ITER:usize = 2;
         */
         for i in 0..MAX_ITER{
-          println!("**********************{}({})[{}]********************",file!(),line!(),i);
           tm.wait_for_cluster_established(1, 60).await.unwrap();
           let notifications_addr = tm.instances.get(&1).unwrap().notifications_addr.clone();
           let client = tm.clients.get_mut(&1).unwrap();
-
+          //println!("**********************{}({})[{}]********************",file!(),line!(),i);
           client.notification_stream_manager
-              .start_listening_for_notifications(&notifications_addr)
+              .start_listening_for_table_notifications(&notifications_addr,&"_test_user2_".into())
               .await
               .unwrap();
-
+          //println!("**********************{}({})[{}]********************",file!(),line!(),i);
+          let message = Message::Execute(
+              "CREATE TABLE IF NOT EXISTS _test_user2_ (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        birth_date DATETIME NOT NULL
+        )"
+              .into(),
+              vec![],
+          );
+        let response = client.sql_with_retries_and_delay(&message,
+          LEADER_VACATION_RETRIES,
+          DELAY_BETWEEN_LEADER_VACATION_RETRIES,
+        ).await.unwrap();
+        
+        let message = response.data.unwrap();
+          match message {
+              MessageResponse::Rows(rows) => assert!(rows.len() == 0),
+              MessageResponse::Error(err) => panic!("{}", err),
+          }
+          
           let message = Message::Execute(
               "CREATE TABLE IF NOT EXISTS _test_user_ (
         id INTEGER PRIMARY KEY,
@@ -184,18 +254,32 @@ fn do_notifications2(test_name: &str,
               MessageResponse::Rows(rows) => assert!(rows.len() == 0),
               MessageResponse::Error(err) => panic!("{}", err),
           }
+          
+          let message = Message::Execute(
+              "INSERT INTO _test_user2_ (name,birth_date) VALUES (?,?)".into(),
+              vec![name.into(), birth_date.into()],
+          );
+          let response = client.sql_with_retries_and_delay(&message,
+            LEADER_VACATION_RETRIES,
+            DELAY_BETWEEN_LEADER_VACATION_RETRIES,
+          ).await.unwrap();
+          let message = response.data.unwrap();
+          match message {
+              MessageResponse::Rows(rows) => assert!(rows.len() == 0),
+              MessageResponse::Error(err) => panic!("{}", err),
+          }
 
           //tm.wait_for_last_applied_log(response.log_id,60).await.unwrap();
 
           // now we check for notification, will do with this:
-          println!("**********************{}({})[{}]********************",file!(),line!(),i);
+          //println!("**********************{}({})[{}]********************",file!(),line!(),i);
           let notification_stream = client.notification_stream_manager.notification_stream.as_mut().unwrap();
           let message = notification_stream
               .read_timeout(NOTIFICATIONS_READ_TIMEOUT)
               .await
               .unwrap();
-          println!("**********************{}({})[{}]********************",file!(),line!(),i);
           assert!(message.is_some());
+          //println!("**********************{}({})[{}]********************",file!(),line!(),i);
           let insert_row_id = match message.unwrap() {
               NotificationEvent::Notification(Notification::Update {
                   action,
@@ -205,10 +289,16 @@ fn do_notifications2(test_name: &str,
               }) => {
                   assert_eq!(action, Action::SQLITE_INSERT);
                   assert_eq!(&database, "main");
-                  assert_eq!(&table, "_test_user_");
+                  assert_eq!(&table, "_test_user2_");
                   row_id
               }
           };
+          let message = notification_stream
+              .read_timeout(NOTIFICATIONS_READ_TIMEOUT/64)
+              .await
+              .unwrap();
+          //println!("**********************{}({})[{}]********************",file!(),line!(),i);
+          assert!(message.is_none());
           let message = Message::Execute(
               "DELETE FROM _test_user_ WHERE name = ?".into(),
               vec![name.into()],
@@ -222,14 +312,29 @@ fn do_notifications2(test_name: &str,
               MessageResponse::Rows(rows) => assert!(rows.len() == 0),
               MessageResponse::Error(err) => panic!("{}", err),
           }
-          println!("**********************{}({})[{}]********************",file!(),line!(),i);
+          
+          let message = Message::Execute(
+              "DELETE FROM _test_user2_ WHERE name = ?".into(),
+              vec![name.into()],
+          );
+          let response = client.sql_with_retries_and_delay(&message,
+            LEADER_VACATION_RETRIES,
+            DELAY_BETWEEN_LEADER_VACATION_RETRIES,
+          ).await.unwrap();
+          let message = response.data.unwrap();
+          match message {
+              MessageResponse::Rows(rows) => assert!(rows.len() == 0),
+              MessageResponse::Error(err) => panic!("{}", err),
+          }
+          
           let notification_stream = client.notification_stream_manager.notification_stream.as_mut().unwrap();
+          //println!("**********************{}({})[{}]********************",file!(),line!(),i);
           let message = notification_stream
               .read_timeout(NOTIFICATIONS_READ_TIMEOUT)
               .await
               .unwrap();
           assert!(message.is_some());
-          println!("**********************{}({})[{}]********************",file!(),line!(),i);
+          //println!("**********************{}({})[{}]********************",file!(),line!(),i);
           match message.unwrap() {
               NotificationEvent::Notification(Notification::Update {
                   action,
@@ -239,15 +344,23 @@ fn do_notifications2(test_name: &str,
               }) => {
                   assert_eq!(action, Action::SQLITE_DELETE);
                   assert_eq!(&database, "main");
-                  assert_eq!(&table, "_test_user_");
+                  assert_eq!(&table, "_test_user2_");
                   assert_eq!(insert_row_id,row_id);
               }
+          
           }
-          println!("**********************{}({})[{}]********************",file!(),line!(),i);
-          client.notification_stream_manager
-              .stop_listening_for_notifications()
+          let message = client.notification_stream_manager.notification_stream
+              .as_mut().unwrap()
+              .read_timeout(NOTIFICATIONS_READ_TIMEOUT/64)
               .await
               .unwrap();
+          //println!("**********************{}({})[{}]********************",file!(),line!(),i);
+          assert!(message.is_none());
+          client.notification_stream_manager
+            .stop_listening_for_table_notifications(&"_test_user2_".into())
+              .await
+              .unwrap();
+          //println!("**********************{}({})[{}]********************",file!(),line!(),i);
           if i < MAX_ITER - 1 {
             tm.kill_all().unwrap();
             /*
@@ -288,7 +401,7 @@ fn do_notifications3(test_name: &str,
           for (node_id,client) in tm.clients.iter_mut() {
             
             client.notification_stream_manager
-                .start_listening_for_notifications(&notifications_addresses.get(node_id).unwrap())
+                .start_listening_for_table_notifications(&notifications_addresses.get(node_id).unwrap(),&"_test_user2_".into())
                 .await
                 .unwrap();
 
@@ -301,6 +414,27 @@ fn do_notifications3(test_name: &str,
                 .into(),
                 vec![],
             );
+            let response = client.sql_with_retries_and_delay(&message.into(),
+            LEADER_VACATION_RETRIES,
+            DELAY_BETWEEN_LEADER_VACATION_RETRIES,
+          ).await.unwrap();
+
+            let message = response.data.unwrap();
+            match message {
+                MessageResponse::Rows(rows) => assert!(rows.len() == 0),
+                MessageResponse::Error(err) => panic!("{}", err),
+            }
+            let message = Message::Execute(
+                "CREATE TABLE IF NOT EXISTS _test_user2_ (
+          id INTEGER PRIMARY KEY,
+          name TEXT NOT NULL UNIQUE,
+          birth_date DATETIME NOT NULL
+          )"
+                .into(),
+                vec![],
+            );
+            
+            
             let response = client.sql_with_retries_and_delay(&message.into(),
             LEADER_VACATION_RETRIES,
             DELAY_BETWEEN_LEADER_VACATION_RETRIES,
@@ -331,7 +465,33 @@ fn do_notifications3(test_name: &str,
 
             // now we check for notification, will do with this:
 
+            
+            let message = client.notification_stream_manager.notification_stream
+              .as_mut().unwrap()
+              .read_timeout(NOTIFICATIONS_READ_TIMEOUT/64)
+              .await
+              .unwrap();
+          //println!("**********************{}({})[{}]********************",file!(),line!(),i);
+          assert!(message.is_none());
+          
+          let name = "Ha";
+            let birth_date = Utc::now();
+            let message = Message::Execute(
+                "INSERT INTO _test_user2_ (name,birth_date) VALUES (?,?)".into(),
+                vec![name.into(), birth_date.into()],
+            );
+            let response = client.sql_with_retries_and_delay(&message.into(),
+              LEADER_VACATION_RETRIES,
+              DELAY_BETWEEN_LEADER_VACATION_RETRIES,
+            ).await.unwrap();
+            let message = response.data.unwrap();
+            match message {
+              MessageResponse::Rows(rows) => assert!(rows.len() == 0),
+              MessageResponse::Error(err) => panic!("{}", err),
+            }
+            
             let notification_stream = client.notification_stream_manager.notification_stream.as_mut().unwrap();
+            
             let message = notification_stream
               .read_timeout(NOTIFICATIONS_READ_TIMEOUT)
                 .await
@@ -346,7 +506,7 @@ fn do_notifications3(test_name: &str,
                   }) => {
                     assert_eq!(action, Action::SQLITE_INSERT);
                     assert_eq!(&database, "main");
-                    assert_eq!(&table, "_test_user_");
+                    assert_eq!(&table, "_test_user2_");
                     row_id
                   }
               //_other=>panic!("unexpected message"),
@@ -364,7 +524,32 @@ fn do_notifications3(test_name: &str,
               MessageResponse::Rows(rows) => assert!(rows.len() == 0),
               MessageResponse::Error(err) => panic!("{}", err),
             }
+            
+            let message = client.notification_stream_manager.notification_stream
+              .as_mut().unwrap()
+              .read_timeout(NOTIFICATIONS_READ_TIMEOUT/64)
+              .await
+              .unwrap();
+          //println!("**********************{}({})[{}]********************",file!(),line!(),i);
+          assert!(message.is_none());
+          
+          
+          let message = Message::Execute(
+                "DELETE FROM _test_user2_ WHERE name = ?".into(),
+                vec![name.into()],
+            );
+            let response = client.sql_with_retries_and_delay(&message.into(),
+              LEADER_VACATION_RETRIES,
+              DELAY_BETWEEN_LEADER_VACATION_RETRIES,
+            ).await.unwrap();
+            let message = response.data.unwrap();
+            match message {
+              MessageResponse::Rows(rows) => assert!(rows.len() == 0),
+              MessageResponse::Error(err) => panic!("{}", err),
+            }
+          
             let notification_stream = client.notification_stream_manager.notification_stream.as_mut().unwrap();
+            
             let message = notification_stream
               .read_timeout(NOTIFICATIONS_READ_TIMEOUT)
               .await
@@ -379,18 +564,18 @@ fn do_notifications3(test_name: &str,
                   }) => {
                     assert_eq!(action, Action::SQLITE_DELETE);
                     assert_eq!(&database, "main");
-                    assert_eq!(&table, "_test_user_");
+                    assert_eq!(&table, "_test_user2_");
                     assert_eq!(insert_row_id,row_id);
                   }
               //_other=>panic!("unexpected message"),
             }
             let message = notification_stream
-              .read_timeout(NOTIFICATIONS_READ_TIMEOUT/16)
+              .read_timeout(NOTIFICATIONS_READ_TIMEOUT/64)
               .await
                 .unwrap();
             assert!(message.is_none());
             client.notification_stream_manager
-                .stop_listening_for_notifications()
+                .stop_listening_for_table_notifications(&"_test_user2_".into())
                 .await
                 .unwrap();
           }
@@ -398,45 +583,51 @@ fn do_notifications3(test_name: &str,
     });
 }
 
+#[tracing_test::traced_test]
 #[test]
-fn notifications() {
-    do_notifications("notifications", None);
+fn table_notifications() {
+    do_notifications("table_notifications", None);
 }
 
+#[tracing_test::traced_test]
 #[test]
-fn notifications_insecure_ssl() {
+fn table_notifications_insecure_ssl() {
     do_notifications(
-        "notifications_insecure_ssl", 
+        "table_notifications_insecure_ssl", 
         Some(TestTlsConfig::default().accept_invalid_certificates(true)),
     );
 }
 
+#[tracing_test::traced_test]
 #[test]
-fn notifications2_no_ssl() {
-    do_notifications2("notifications2_no_ssl", None);
+fn table_notifications2_no_ssl() {
+    do_notifications2("table_notifications2_no_ssl", None);
     
 }
 
+#[tracing_test::traced_test]
 #[test]
-fn notifications2_insecure_ssl() {
+fn table_notifications2_insecure_ssl() {
     do_notifications2(
-        "notifications2_insecure_ssl",
+        "table_notifications2_insecure_ssl",
         Some(TestTlsConfig::default().accept_invalid_certificates(true)),
     );
     
     
 }
 
+#[tracing_test::traced_test]
 #[test]
-fn notifications3_no_ssl() {
-    do_notifications3("notifications3_no_ssl", None);
+fn table_notifications3_no_ssl() {
+    do_notifications3("table_notifications3_no_ssl", None);
     
 }
 
+#[tracing_test::traced_test]
 #[test]
-fn notifications3_insecure_ssl() {
+fn table_notifications3_insecure_ssl() {
     do_notifications3(
-        "notifications3_insecure_ssl",
+        "table_notifications3_insecure_ssl",
         Some(TestTlsConfig::default().accept_invalid_certificates(true)),
     );
     
