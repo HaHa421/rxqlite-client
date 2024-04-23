@@ -4,7 +4,7 @@
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 use rxqlite_lite_common::*;
 use reqwest::{Client, ClientBuilder};
@@ -362,11 +362,17 @@ impl RXQLiteClient {
             Ok(res) => match res.data {
                 Some(res) => match res {
                     MessageResponse::Rows(rows) => Ok(rows),
-                    MessageResponse::Error(error) => Err(anyhow::anyhow!(error)),
+                    MessageResponse::Error(err) => {
+                      tracing::error!("{}",err);
+                      Err(anyhow::anyhow!(err))
+                    }
                 },
                 _ => Ok(Rows::default()),
             },
-            Err(err) => Err(anyhow::anyhow!(err)),
+            Err(err) => {
+              tracing::error!("{}",err);
+              Err(anyhow::anyhow!(err))
+            }
         }
     }
     pub async fn fetch_one(
@@ -486,7 +492,7 @@ impl RXQLiteClient {
         Err: std::error::Error + Serialize + DeserializeOwned,
     {
         let (node_id, url) = {
-            let t = dest_node.lock().unwrap();
+            let t = dest_node.lock().await;
             let target_addr = &t.1;
             (
                 t.0,
@@ -585,7 +591,7 @@ impl RXQLiteClient {
                 {
                     // Update target to the new leader.
                     if let (Some(leader_id), Some(leader_node)) = (leader_id, leader_node) {
-                        let mut t = self.leader.lock().unwrap();
+                        let mut t = self.leader.lock().await;
                         let api_addr = leader_node.api_addr.clone();
                         *t = (*leader_id, api_addr);
                     } else {

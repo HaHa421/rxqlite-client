@@ -19,6 +19,9 @@ use tokio::runtime::Runtime;
 pub mod consts;
 
 #[cfg(not(feature = "test-dependency"))]
+pub mod invalid_queries;
+
+#[cfg(not(feature = "test-dependency"))]
 pub mod notifications;
 
 #[cfg(not(feature = "test-dependency"))]
