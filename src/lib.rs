@@ -21,7 +21,7 @@ pub mod tests;
 
 //use crate::TypeConfig;
 
-use rxqlite_common::{Message, MessageResponse, RSQliteClientTlsConfig, Rows, Value};
+use rxqlite_common::{Message, MessageResponse, RSQliteClientTlsConfig, Rows, Value, QueryResult, Either, Row };
 
 
 pub struct RXQLiteClientBuilder {
@@ -333,7 +333,7 @@ impl RXQLiteClient {
         &self,
         query: &str,
         arguments: Vec<Value>,
-    ) -> Result<Rows, RXQLiteError> {
+    ) -> Result<QueryResult, RXQLiteError> {
         let req = Message::Execute(query.into(), arguments);
         let res: Result<ClientWriteResponse, RPCError<RaftError<ClientWriteError>>> = self
             .send_rpc_to_leader("lite-api/sql-consistent", Some(&req))
@@ -341,12 +341,42 @@ impl RXQLiteClient {
         match res {
             Ok(res) => match res.data {
                 Some(res) => match res {
-                    MessageResponse::Rows(rows) => Ok(rows),
+                    MessageResponse::QueryResult(res) => Ok(res),
+                    MessageResponse::Rows(_) => Err(anyhow::anyhow!("unexpected result type from database")),
+                    MessageResponse::QueryResultsAndRows(_) => Err(anyhow::anyhow!("unexpected result type from database")),
                     MessageResponse::Error(error) => Err(anyhow::anyhow!(error)),
                 },
-                _ => Ok(Rows::default()),
+                _ => Ok(QueryResult::default()),
             },
             Err(err) => Err(anyhow::anyhow!(err)),
+        }
+    }
+    pub async fn fetch_many(
+        &self,
+        query: &str,
+        arguments: Vec<Value>,
+    ) -> Result<Vec<Result<Either<QueryResult,Row>,String>>, RXQLiteError> {
+        let req = Message::FetchMany(query.into(), arguments);
+        let res: Result<ClientWriteResponse, RPCError<RaftError<ClientWriteError>>> = self
+            .send_rpc_to_leader("lite-api/sql-consistent", Some(&req))
+            .await;
+        match res {
+            Ok(res) => match res.data {
+                Some(res) => match res {
+                    MessageResponse::QueryResult(_) => Err(anyhow::anyhow!("unexpected result type from database")),
+                    MessageResponse::Rows(_) => Err(anyhow::anyhow!("unexpected result type from database")),
+                    MessageResponse::QueryResultsAndRows(qrr) => Ok(qrr),
+                    MessageResponse::Error(err) => {
+                      tracing::error!("{}",err);
+                      Err(anyhow::anyhow!(err))
+                    }
+                },
+                _ => Ok(Default::default()),
+            },
+            Err(err) => {
+              tracing::error!("{}",err);
+              Err(anyhow::anyhow!(err))
+            }
         }
     }
     pub async fn fetch_all(
@@ -361,7 +391,9 @@ impl RXQLiteClient {
         match res {
             Ok(res) => match res.data {
                 Some(res) => match res {
+                    MessageResponse::QueryResult(_) => Err(anyhow::anyhow!("unexpected result type from database")),
                     MessageResponse::Rows(rows) => Ok(rows),
+                    MessageResponse::QueryResultsAndRows(_) => Err(anyhow::anyhow!("unexpected result type from database")),
                     MessageResponse::Error(err) => {
                       tracing::error!("{}",err);
                       Err(anyhow::anyhow!(err))
@@ -387,6 +419,7 @@ impl RXQLiteClient {
         match res {
             Ok(res) => match res.data {
                 Some(res) => match res {
+                    MessageResponse::QueryResult(_) => Err(anyhow::anyhow!("unexpected result type from database")),
                     MessageResponse::Rows(mut rows) => {
                         if rows.len() >= 1 {
                             Ok(rows.remove(0))
@@ -394,6 +427,7 @@ impl RXQLiteClient {
                             Err(anyhow::anyhow!("no row matching query"))
                         }
                     }
+                    MessageResponse::QueryResultsAndRows(_) => Err(anyhow::anyhow!("unexpected result type from database")),
                     MessageResponse::Error(error) => Err(anyhow::anyhow!(error)),
                 },
                 _ => Err(anyhow::anyhow!("no row matching query")),
@@ -413,6 +447,7 @@ impl RXQLiteClient {
         match res {
             Ok(res) => match res.data {
                 Some(res) => match res {
+                    MessageResponse::QueryResult(_) => Err(anyhow::anyhow!("unexpected result type from database")),
                     MessageResponse::Rows(mut rows) => {
                         if rows.len() >= 1 {
                             Ok(Some(rows.remove(0)))
@@ -420,6 +455,7 @@ impl RXQLiteClient {
                             Ok(None)
                         }
                     }
+                    MessageResponse::QueryResultsAndRows(_) => Err(anyhow::anyhow!("unexpected result type from database")),
                     MessageResponse::Error(error) => Err(anyhow::anyhow!(error)),
                 },
                 _ => Ok(None),

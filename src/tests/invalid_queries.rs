@@ -65,7 +65,9 @@ fn do_invalid(test_name: &str,
 
         let message = response.data.unwrap();
         match message {
+            MessageResponse::QueryResult(res) => panic!("expected error, got {:?}", res),
             MessageResponse::Rows(rows) => panic!("expected error, got {:?}", rows),
+            MessageResponse::QueryResultsAndRows(_) => panic!("unexpected database response"),
             MessageResponse::Error(_err) => {},
         }
         
